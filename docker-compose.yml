@@ -1,0 +1,102 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: cyber-threat-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - cyber-threat-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  log-service:
+    build:
+      context: ./cyberThreatDetection
+      dockerfile: log-ingester-service/Dockerfile
+    container_name: cyber-threat-log-service
+    ports:
+      - "${PORT_LOG_SERVICE}:8081"
+    environment:
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - API_KEY=${API_KEY}
+      - PORT=8081
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - cyber-threat-network
+    restart: unless-stopped
+
+  threat-service:
+    build:
+      context: ./cyberThreatDetection
+      dockerfile: threat-analyzer-service/Dockerfile
+    container_name: cyber-threat-threat-service
+    ports:
+      - "${PORT_THREAT_SERVICE}:8082"
+    environment:
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - LOG_SERVICE_URL=${LOG_SERVICE_URL}
+      - API_KEY=${API_KEY}
+      - PORT=8082
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      log-service:
+        condition: service_started
+    networks:
+      - cyber-threat-network
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./cyberThreatDetection
+      dockerfile: api-gateway-service/Dockerfile
+    container_name: cyber-threat-api-gateway
+    ports:
+      - "${PORT_GATEWAY}:8080"
+    environment:
+      - LOG_SERVICE_URL=${LOG_SERVICE_URL}
+      - THREAT_SERVICE_URL=${THREAT_SERVICE_URL}
+      - API_KEY=${API_KEY}
+      - PORT=8080
+    depends_on:
+      - log-service
+      - threat-service
+    networks:
+      - cyber-threat-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./cyber_threat_frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: cyber-threat-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    depends_on:
+      - api-gateway
+    networks:
+      - cyber-threat-network
+    restart: unless-stopped
+
+volumes:
+  elasticsearch-data:
+    driver: local
+
+networks:
+  cyber-threat-network:
+    driver: bridge

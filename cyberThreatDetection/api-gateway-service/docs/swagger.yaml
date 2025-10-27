@@ -1,0 +1,428 @@
+basePath: /
+definitions:
+  api-gateway-service_handlers.AuthResponse:
+    properties:
+      role:
+        type: string
+      token:
+        type: string
+      username:
+        type: string
+    type: object
+  api-gateway-service_handlers.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  api-gateway-service_handlers.RegisterRequest:
+    properties:
+      password:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  cybersecuritySystem_shared_utils.APIError:
+    description: API error details
+    properties:
+      code:
+        type: integer
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+  cybersecuritySystem_shared_utils.APIResponse:
+    description: Standard API response wrapper
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/cybersecuritySystem_shared_utils.APIError'
+      meta:
+        $ref: '#/definitions/cybersecuritySystem_shared_utils.Meta'
+      success:
+        type: boolean
+    type: object
+  cybersecuritySystem_shared_utils.Meta:
+    description: Response metadata with pagination and timing info
+    properties:
+      count:
+        type: integer
+      limit:
+        type: integer
+      page:
+        type: integer
+      timestamp:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.Log:
+    properties:
+      action:
+        enum:
+        - loginSuccess
+        - loginFailed
+        - fileAccess
+        - databaseQuery
+        type: string
+      databaseQuery:
+        type: string
+      fileName:
+        type: string
+      id:
+        type: string
+      ipAddress:
+        type: string
+      timestamp:
+        type: string
+      userId:
+        type: string
+    required:
+    - action
+    - ipAddress
+    - userId
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API Gateway for cybersecurity threat detection system
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Cybersecurity Threat Detection API Gateway
+  version: "1.0"
+paths:
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/api-gateway-service_handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/api-gateway-service_handlers.AuthResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      summary: User login
+      tags:
+      - auth
+  /api/auth/refresh:
+    post:
+      description: Get a new JWT token using existing valid token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/api-gateway-service_handlers.AuthResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Refresh JWT token
+      tags:
+      - auth
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/api-gateway-service_handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/api-gateway-service_handlers.AuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      summary: Register new user
+      tags:
+      - auth
+  /api/logs:
+    get:
+      description: Retrieve all logs from the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get all logs
+      tags:
+      - logs
+    post:
+      consumes:
+      - application/json
+      description: Create a new log entry in the system
+      parameters:
+      - description: Log object to create
+        in: body
+        name: log
+        required: true
+        schema:
+          $ref: '#/definitions/models.Log'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new log
+      tags:
+      - logs
+  /api/logs/{logId}:
+    get:
+      description: Retrieve a specific log by its ID
+      parameters:
+      - description: Log ID
+        in: path
+        name: logId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get log by ID
+      tags:
+      - logs
+  /api/logs/search:
+    get:
+      description: Search logs with filters (userId, action, time range)
+      parameters:
+      - description: User ID
+        in: query
+        name: userId
+        type: string
+      - description: Action type
+        in: query
+        name: action
+        type: string
+      - description: Start time (ISO 8601)
+        in: query
+        name: startTime
+        type: string
+      - description: End time (ISO 8601)
+        in: query
+        name: endTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Search logs
+      tags:
+      - logs
+  /api/logs/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a CSV file containing logs and import them into the system
+      parameters:
+      - description: CSV file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Upload CSV log file
+      tags:
+      - logs
+  /api/threats:
+    get:
+      description: Retrieve all detected threats from the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get all threats
+      tags:
+      - threats
+  /api/threats/{threatId}:
+    get:
+      description: Retrieve a specific threat by its ID
+      parameters:
+      - description: Threat ID
+        in: path
+        name: threatId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get threat by ID
+      tags:
+      - threats
+  /api/threats/analyze:
+    post:
+      description: Run threat detection analysis on all logs in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Analyze threats
+      tags:
+      - threats
+  /api/threats/search:
+    get:
+      description: Search threats with filters (type, user)
+      parameters:
+      - description: Threat type
+        in: query
+        name: type
+        type: string
+      - description: User ID
+        in: query
+        name: user
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/cybersecuritySystem_shared_utils.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Search threats
+      tags:
+      - threats
+securityDefinitions:
+  ApiKeyAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
