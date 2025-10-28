@@ -15,7 +15,7 @@ A real-time cybersecurity monitoring system that detects threats like credential
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd cyberThreatDetection
+cd cyberLogsThreat
 ```
 
 2. **Start all services**
